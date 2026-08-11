@@ -73,6 +73,11 @@ public class DatabaseConverter {
     public static void tryConvertDatabase() {
         boolean isOldDatabaseFormat = isDatabaseOldFormat();
         if (isOldDatabaseFormat) {
+            if (DBSession.isPostgreSQL()) {
+                throw new IllegalStateException("Automatic conversion of legacy PostgreSQL databases is not " +
+                        "supported because the old schema cannot be converted safely in place.");
+            }
+
             convertDatabase();
             saveConvertedData();
         }
@@ -177,6 +182,7 @@ public class DatabaseConverter {
         switch (plugin.getSettings().getDatabase().getType()) {
             case "MYSQL":
             case "MARIADB":
+            case "POSTGRES":
             case "POSTGRESQL":
                 return true;
             default:
@@ -187,19 +193,19 @@ public class DatabaseConverter {
     private static void savePlayers() {
         Log.info("[Database-Converter] Converting players...");
 
-        CustomSQLDatabaseTransaction playersTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}players VALUES(?,?,?,?,?)");
-        CustomSQLDatabaseTransaction playersMissionsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}players_missions VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction playersSettingsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}players_settings VALUES(?,?,?,?,?,?)");
+        CustomSQLDatabaseTransaction playersTransaction = DBSession.createInsertTransaction("players",
+                "uuid", "last_used_name", "last_used_skin", "disbands", "last_time_updated");
+        CustomSQLDatabaseTransaction playersMissionsTransaction = DBSession.createInsertTransaction("players_missions",
+                "player", "name", "finish_count");
+        CustomSQLDatabaseTransaction playersSettingsTransaction = DBSession.createInsertTransaction("players_settings",
+                "player", "language", "toggled_panel", "border_color", "toggled_border", "island_fly");
 
         for (PlayerAttributes playerAttributes : loadedPlayers) {
             insertPlayer(playerAttributes, playersTransaction, playersMissionsTransaction, playersSettingsTransaction);
         }
 
         try {
-            DBSession.execute(playersMissionsTransaction, playersSettingsTransaction).get();
+            DBSession.execute(playersTransaction, playersMissionsTransaction, playersSettingsTransaction).get();
         } catch (InterruptedException | ExecutionException error) {
             error.printStackTrace();
         }
@@ -210,50 +216,53 @@ public class DatabaseConverter {
 
         Log.info("[Database-Converter] Converting islands...");
 
-        CustomSQLDatabaseTransaction islandsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsBanksTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_banks VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsBansTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_bans VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsBlockLimitsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_block_limits VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsChestsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_chests VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsEffectsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_effects VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsEntityLimitsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_entity_limits VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsFlagsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_flags VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsGeneratorsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_generators VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsHomesTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_homes VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsMembersTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_members VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsMissionsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_missions VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsPlayerPermissionsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_player_permissions VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsRatingsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_ratings VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsRoleLimitsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_role_limits VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsRolePermissionsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_role_permissions VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsSettingsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_settings VALUES(?,?,?,?,?,?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsUpgradesTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_upgrades VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsVisitorHomesTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_visitor_homes VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsVisitorsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_visitors VALUES(?,?,?)");
-        CustomSQLDatabaseTransaction islandsWarpCategoriesTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_warp_categories VALUES(?,?,?,?)");
-        CustomSQLDatabaseTransaction islandsWarpsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}islands_warps VALUES(?,?,?,?,?,?)");
+        CustomSQLDatabaseTransaction islandsTransaction = DBSession.createInsertTransaction("islands",
+                "uuid", "owner", "center", "creation_time", "island_type", "discord", "paypal", "worth_bonus",
+                "levels_bonus", "locked", "ignored", "name", "description", "generated_schematics",
+                "unlocked_worlds", "last_time_updated", "dirty_chunks", "block_counts");
+        CustomSQLDatabaseTransaction islandsBanksTransaction = DBSession.createInsertTransaction("islands_banks",
+                "island", "balance", "last_interest_time");
+        CustomSQLDatabaseTransaction islandsBansTransaction = DBSession.createInsertTransaction("islands_bans",
+                "island", "player", "banned_by", "banned_time");
+        CustomSQLDatabaseTransaction islandsBlockLimitsTransaction = DBSession.createInsertTransaction(
+                "islands_block_limits", "island", "block", "limit");
+        CustomSQLDatabaseTransaction islandsChestsTransaction = DBSession.createInsertTransaction("islands_chests",
+                "island", "index", "contents");
+        CustomSQLDatabaseTransaction islandsEffectsTransaction = DBSession.createInsertTransaction("islands_effects",
+                "island", "effect_type", "level");
+        CustomSQLDatabaseTransaction islandsEntityLimitsTransaction = DBSession.createInsertTransaction(
+                "islands_entity_limits", "island", "entity", "limit");
+        CustomSQLDatabaseTransaction islandsFlagsTransaction = DBSession.createInsertTransaction("islands_flags",
+                "island", "name", "status");
+        CustomSQLDatabaseTransaction islandsGeneratorsTransaction = DBSession.createInsertTransaction(
+                "islands_generators", "island", "environment", "block", "rate");
+        CustomSQLDatabaseTransaction islandsHomesTransaction = DBSession.createInsertTransaction("islands_homes",
+                "island", "environment", "location");
+        CustomSQLDatabaseTransaction islandsMembersTransaction = DBSession.createInsertTransaction("islands_members",
+                "island", "player", "role", "join_time");
+        CustomSQLDatabaseTransaction islandsMissionsTransaction = DBSession.createInsertTransaction(
+                "islands_missions", "island", "name", "finish_count");
+        CustomSQLDatabaseTransaction islandsPlayerPermissionsTransaction = DBSession.createInsertTransaction(
+                "islands_player_permissions", "island", "player", "permission", "status");
+        CustomSQLDatabaseTransaction islandsRatingsTransaction = DBSession.createInsertTransaction("islands_ratings",
+                "island", "player", "rating", "rating_time");
+        CustomSQLDatabaseTransaction islandsRoleLimitsTransaction = DBSession.createInsertTransaction(
+                "islands_role_limits", "island", "role", "limit");
+        CustomSQLDatabaseTransaction islandsRolePermissionsTransaction = DBSession.createInsertTransaction(
+                "islands_role_permissions", "island", "role", "permission");
+        CustomSQLDatabaseTransaction islandsSettingsTransaction = DBSession.createInsertTransaction(
+                "islands_settings", "island", "size", "bank_limit", "coops_limit", "members_limit", "warps_limit",
+                "crop_growth_multiplier", "spawner_rates_multiplier", "mob_drops_multiplier");
+        CustomSQLDatabaseTransaction islandsUpgradesTransaction = DBSession.createInsertTransaction(
+                "islands_upgrades", "island", "upgrade", "level");
+        CustomSQLDatabaseTransaction islandsVisitorHomesTransaction = DBSession.createInsertTransaction(
+                "islands_visitor_homes", "island", "environment", "location");
+        CustomSQLDatabaseTransaction islandsVisitorsTransaction = DBSession.createInsertTransaction(
+                "islands_visitors", "island", "player", "visit_time");
+        CustomSQLDatabaseTransaction islandsWarpCategoriesTransaction = DBSession.createInsertTransaction(
+                "islands_warp_categories", "island", "name", "slot", "icon");
+        CustomSQLDatabaseTransaction islandsWarpsTransaction = DBSession.createInsertTransaction("islands_warps",
+                "island", "name", "category", "location", "private", "icon");
 
         for (IslandAttributes islandAttributes : loadedIslands) {
             insertIsland(islandAttributes, currentTime, islandsTransaction, islandsBanksTransaction, islandsBansTransaction,
@@ -297,8 +306,8 @@ public class DatabaseConverter {
     private static void saveStackedBlocks() {
         Log.info("[Database-Converter] Converting stacked blocks...");
 
-        CustomSQLDatabaseTransaction stackedBlocksTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}stacked_blocks VALUES(?,?,?)");
+        CustomSQLDatabaseTransaction stackedBlocksTransaction = DBSession.createInsertTransaction("stacked_blocks",
+                "location", "block_type", "amount");
 
         for (StackedBlockAttributes stackedBlockAttributes : loadedBlocks) {
             stackedBlocksTransaction
@@ -318,8 +327,9 @@ public class DatabaseConverter {
     private static void saveBankTransactions() {
         Log.info("[Database-Converter] Converting bank transactions...");
 
-        CustomSQLDatabaseTransaction bankTransactionsTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}bank_transactions VALUES(?,?,?,?,?,?,?)");
+        CustomSQLDatabaseTransaction bankTransactionsTransaction = DBSession.createInsertTransaction(
+                "bank_transactions", "island", "player", "bank_action", "position", "time", "failure_reason",
+                "amount");
 
         for (BankTransactionsAttributes bankTransactionsAttributes : loadedBankTransactions) {
             bankTransactionsTransaction
@@ -353,8 +363,8 @@ public class DatabaseConverter {
             error.printStackTrace();
         }
 
-        CustomSQLDatabaseTransaction insertGridTransaction = new CustomSQLDatabaseTransaction(
-                "REPLACE INTO {prefix}grid VALUES(?,?,?)");
+        CustomSQLDatabaseTransaction insertGridTransaction = DBSession.createInsertTransaction("grid",
+                "last_island", "max_island_size", "world");
         insertGridTransaction
                 .bindObject(gridAttributes.getValue(GridAttributes.Field.LAST_ISLAND))
                 .bindObject(gridAttributes.getValue(GridAttributes.Field.MAX_ISLAND_SIZE))

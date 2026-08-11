@@ -13,12 +13,13 @@ calc-interval: 0
 # All settings related to the database of the plugin.
 database:
   # For local database, use "SQLite".
-  # For remote database, use "MySQL" or "MariaDB" (Depends on your setup).
+  # For remote database, use "MySQL", "MariaDB" or "PostgreSQL" (Depends on your setup).
   type: SQLite
   # Whether the datastore folder should be back-up on startup.
   backup: true
   # Remote database information
   address: 'localhost'
+  # MySQL/MariaDB commonly use 3306. PostgreSQL commonly uses 5432.
   port: 3306
   db-name: 'SuperiorSkyblock'
   user-name: 'root'

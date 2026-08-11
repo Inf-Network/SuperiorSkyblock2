@@ -19,8 +19,16 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
 
     @Override
     public void setState(State state) throws ManagerLoadException {
-        if (!plugin.getFactory().hasCustomDatabaseBridge())
+        if (plugin.getFactory().hasCustomDatabaseBridge())
+            return;
+
+        try {
             super.setState(state);
+        } catch (ManagerLoadException error) {
+            if (DBSession.isReady())
+                DBSession.close();
+            throw error;
+        }
     }
 
     @Override
@@ -32,6 +40,9 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
 
         try {
             DBSession.select("ssb_metadata", "", new QueryResult<ResultSet>().onSuccess(resultSet -> {
+                if (!resultSet.next())
+                    return;
+
                 int databaseVersion = resultSet.getInt("version");
 
                 if (databaseVersion > SQLDatabase.getCurrentDatabaseVersion())
@@ -39,17 +50,31 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
             }).onFail(error -> {
             }));
         } catch (IllegalStateException error) {
+            DBSession.close();
             throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
         }
 
-        SQLDatabase.UpgradeResult databaseUpgradeResult = SQLDatabase.upgradeDatabase();
+        SQLDatabase.UpgradeResult databaseUpgradeResult;
+        try {
+            databaseUpgradeResult = SQLDatabase.upgradeDatabase();
+            SQLDatabase.initializeDatabase();
+        } catch (IllegalStateException error) {
+            DBSession.close();
+            throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
+        }
 
-        SQLDatabase.initializeDatabase();
-
-        if (databaseUpgradeResult.isUpgraded())
-            GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
+        if (databaseUpgradeResult.isUpgraded()) {
+            if (DBSession.isPostgreSQL())
+                DBSession.updateDatabaseVersion(databaseUpgradeResult.getDatabaseVersion());
+            else
+                GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
+        }
 
         DBSession.select("grid", "", new QueryResult<ResultSet>()
+                .onSuccess(resultSet -> {
+                    if (!resultSet.next())
+                        GridDatabaseBridge.insertGrid(plugin.getGrid());
+                })
                 .onFail(error -> GridDatabaseBridge.insertGrid(plugin.getGrid())));
     }
 
@@ -62,7 +87,7 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
                 "island", "block");
 
         DBSession.createIndex("islands_chests_index", "islands_chests",
-                "island", "`index`");
+                "island", DBSession.quoteIdentifier("index"));
 
         DBSession.createIndex("islands_effects_index", "islands_effects",
                 "island", "effect_type");
