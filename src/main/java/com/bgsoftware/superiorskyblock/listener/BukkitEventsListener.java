@@ -77,7 +77,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
@@ -182,7 +182,7 @@ public class BukkitEventsListener implements Listener {
         createEventListener(GameEventType.PLAYER_ITEM_CONSUME_EVENT, PlayerItemConsumeEvent.class, this::createGameEvent);
         createEventListener(GameEventType.PLAYER_JOIN_EVENT, PlayerJoinEvent.class, this::createGameEvent);
         createEventListener(GameEventType.PLAYER_LEASH_ENTITY_EVENT, PlayerLeashEntityEvent.class, this::createGameEvent);
-        createEventListener(GameEventType.PLAYER_LOGIN_EVENT, PlayerLoginEvent.class, this::createGameEvent);
+        createEventListener(GameEventType.PLAYER_LOGIN_EVENT, PlayerSpawnLocationEvent.class, this::createGameEvent);
         createEventListener(GameEventType.PLAYER_PICKUP_ITEM_EVENT, PlayerPickupItemEvent.class, this::createGameEvent);
         createEventListener(GameEventType.PLAYER_QUIT_EVENT, PlayerQuitEvent.class, this::createGameEvent);
         createEventListener(GameEventType.PLAYER_RESPAWN_EVENT, PlayerRespawnEvent.class, this::createGameEvent);
@@ -761,7 +761,7 @@ public class BukkitEventsListener implements Listener {
         return eventType.createEvent(playerLeashEntityEvent);
     }
 
-    private GameEvent<GameEventArgs.PlayerLoginEvent> createGameEvent(GameEventType<GameEventArgs.PlayerLoginEvent> eventType, GameEventPriority priority, PlayerLoginEvent e) {
+    private GameEvent<GameEventArgs.PlayerLoginEvent> createGameEvent(GameEventType<GameEventArgs.PlayerLoginEvent> eventType, GameEventPriority priority, PlayerSpawnLocationEvent e) {
         GameEventArgs.PlayerLoginEvent playerLoginEvent = new GameEventArgs.PlayerLoginEvent();
         playerLoginEvent.player = e.getPlayer();
         return eventType.createEvent(playerLoginEvent);
