@@ -82,7 +82,7 @@ public class SuperiorSkyblockAPI {
      * Get the superior player object from a player instance.
      */
     public static SuperiorPlayer getPlayer(Player player) {
-        return plugin.getPlayers().getSuperiorPlayer(player.getUniqueId());
+        return plugin.getPlayers().getSuperiorPlayer(player);
     }
 
     /**

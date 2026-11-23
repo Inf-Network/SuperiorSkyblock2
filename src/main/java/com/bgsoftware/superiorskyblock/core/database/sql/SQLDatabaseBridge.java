@@ -47,7 +47,7 @@ public class SQLDatabaseBridge implements DatabaseBridge {
         if (batchOperations) {
             batchTransactions = new LinkedList<>();
         } else if (batchTransactions != null) {
-            DBSession.execute(batchTransactions);
+            CoopDatabaseWrites.track(DBSession.execute(batchTransactions));
             batchTransactions = null;
         }
     }
@@ -152,7 +152,7 @@ public class SQLDatabaseBridge implements DatabaseBridge {
         if (batchTransactions != null) {
             batchTransactions.add(transaction);
         } else {
-            DBSession.execute(transaction);
+            CoopDatabaseWrites.track(DBSession.execute(transaction));
         }
     }
 

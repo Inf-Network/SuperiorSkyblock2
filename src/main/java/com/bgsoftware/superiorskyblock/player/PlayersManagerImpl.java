@@ -41,13 +41,26 @@ public class PlayersManagerImpl extends Manager implements PlayersManager {
     @Override
     public SuperiorPlayer getSuperiorPlayer(String name) {
         Preconditions.checkNotNull(name, "name parameter cannot be null.");
-        return this.playersContainer.getSuperiorPlayer(name);
+        Player online = Bukkit.getPlayerExact(name);
+        if (online != null)
+            return getSuperiorPlayer(online);
+        SuperiorPlayer account = this.playersContainer.getSuperiorPlayer(name);
+        if (account == null)
+            return null;
+        UUID selected = ProfileIdentities.selectedCharacterId(account.getUniqueId());
+        return selected == null ? null : getSuperiorPlayer(selected);
     }
 
     @Override
     public SuperiorPlayer getSuperiorPlayer(Player player) {
         Preconditions.checkNotNull(player, "player parameter cannot be null.");
-        return player.hasMetadata("NPC") ? SuperiorNPCPlayer.obtain(player) : getSuperiorPlayer(player.getUniqueId());
+        if (player.hasMetadata("NPC"))
+            return SuperiorNPCPlayer.obtain(player);
+
+        UUID characterId = ProfileIdentities.selectedCharacterId(player.getUniqueId());
+        if (characterId == null)
+            throw new IllegalStateException("The authenticated account has no active SkyBlock character");
+        return getSuperiorPlayer(characterId);
     }
 
     @Override

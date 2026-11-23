@@ -1,6 +1,7 @@
 package com.bgsoftware.superiorskyblock.player.container;
 
 import com.bgsoftware.common.annotations.Nullable;
+import com.bgsoftware.superiorskyblock.api.player.ProfileIdentityProvider;
 import com.bgsoftware.superiorskyblock.api.player.container.PlayersContainer;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import com.bgsoftware.superiorskyblock.core.SequentialListBuilder;
@@ -23,7 +24,8 @@ public class DefaultPlayersContainer implements PlayersContainer {
 
         if (superiorPlayer == null) {
             superiorPlayer = players.values().stream()
-                    .filter(player -> player.getName().equalsIgnoreCase(name))
+                    .filter(player -> !ProfileIdentityProvider.isCharacterId(player.getUniqueId())
+                            && player.getName().equalsIgnoreCase(name))
                     .findFirst().orElse(null);
             if (superiorPlayer != null)
                 this.playersByNames.put(name.toLowerCase(Locale.ENGLISH), superiorPlayer);
@@ -47,14 +49,14 @@ public class DefaultPlayersContainer implements PlayersContainer {
     public void addPlayer(SuperiorPlayer superiorPlayer) {
         this.players.put(superiorPlayer.getUniqueId(), superiorPlayer);
         String playerName = superiorPlayer.getName();
-        if (!playerName.equals("null"))
+        if (!ProfileIdentityProvider.isCharacterId(superiorPlayer.getUniqueId()) && !playerName.equals("null"))
             this.playersByNames.put(playerName.toLowerCase(Locale.ENGLISH), superiorPlayer);
     }
 
     @Override
     public void removePlayer(SuperiorPlayer superiorPlayer) {
         this.players.remove(superiorPlayer.getUniqueId());
-        this.playersByNames.remove(superiorPlayer.getName().toLowerCase(Locale.ENGLISH));
+        this.playersByNames.remove(superiorPlayer.getName().toLowerCase(Locale.ENGLISH), superiorPlayer);
     }
 
 }

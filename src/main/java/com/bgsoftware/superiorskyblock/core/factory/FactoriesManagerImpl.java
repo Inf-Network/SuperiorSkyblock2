@@ -42,6 +42,7 @@ import com.bgsoftware.superiorskyblock.island.algorithm.DefaultIslandEntitiesTra
 import com.bgsoftware.superiorskyblock.island.bank.SBankTransaction;
 import com.bgsoftware.superiorskyblock.island.bank.SIslandBank;
 import com.bgsoftware.superiorskyblock.island.builder.IslandBuilderImpl;
+import com.bgsoftware.superiorskyblock.player.ProfileIdentities;
 import com.bgsoftware.superiorskyblock.player.SSuperiorPlayer;
 import com.bgsoftware.superiorskyblock.player.algorithm.DefaultPlayerTeleportAlgorithm;
 import com.bgsoftware.superiorskyblock.player.builder.SuperiorPlayerBuilderImpl;
@@ -130,7 +131,7 @@ public class FactoriesManagerImpl implements FactoriesManager {
     @Override
     public SuperiorPlayer createPlayer(UUID playerUUID) {
         Preconditions.checkNotNull(playerUUID, "playerUUID parameter cannot be null.");
-        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(ProfileIdentities.accountId(playerUUID));
         SuperiorPlayer.Builder builder = createPlayerBuilder()
                 .setUniqueId(playerUUID);
 

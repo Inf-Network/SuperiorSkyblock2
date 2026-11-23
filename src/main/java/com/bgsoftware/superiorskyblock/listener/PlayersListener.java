@@ -4,6 +4,7 @@ import com.bgsoftware.superiorskyblock.SuperiorSkyblockPlugin;
 import com.bgsoftware.superiorskyblock.api.enums.HitActionResult;
 import com.bgsoftware.superiorskyblock.api.events.IslandUncoopPlayerEvent;
 import com.bgsoftware.superiorskyblock.api.island.Island;
+import com.bgsoftware.superiorskyblock.api.player.ProfileIdentityProvider;
 import com.bgsoftware.superiorskyblock.api.island.IslandChest;
 import com.bgsoftware.superiorskyblock.api.player.PlayerStatus;
 import com.bgsoftware.superiorskyblock.api.player.respawn.RespawnAction;
@@ -72,7 +73,8 @@ public class PlayersListener extends AbstractGameEventListener {
         Player player = e.getArgs().player;
 
         List<SuperiorPlayer> duplicatedPlayers = plugin.getPlayers().matchAllPlayers(superiorPlayer ->
-                superiorPlayer.getName().equalsIgnoreCase(player.getName()) &&
+                !ProfileIdentityProvider.isCharacterId(superiorPlayer.getUniqueId()) &&
+                        superiorPlayer.getName().equalsIgnoreCase(player.getName()) &&
                         !superiorPlayer.getUniqueId().equals(player.getUniqueId()));
 
         if (!duplicatedPlayers.isEmpty()) {

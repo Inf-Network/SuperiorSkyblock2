@@ -264,7 +264,8 @@ public class SSuperiorPlayer implements SuperiorPlayer {
 
     @Override
     public Player asPlayer() {
-        return Bukkit.getPlayer(uuid);
+        UUID accountId = ProfileIdentities.accountId(uuid);
+        return uuid.equals(ProfileIdentities.selectedCharacterId(accountId)) ? Bukkit.getPlayer(accountId) : null;
     }
 
     @Override
@@ -274,8 +275,7 @@ public class SSuperiorPlayer implements SuperiorPlayer {
 
     @Override
     public boolean isOnline() {
-        OfflinePlayer offlinePlayer = asOfflinePlayer();
-        return offlinePlayer != null && offlinePlayer.isOnline();
+        return asPlayer() != null;
     }
 
     @Override
