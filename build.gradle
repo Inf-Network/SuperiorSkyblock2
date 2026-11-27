@@ -91,6 +91,10 @@ dependencies {
     implementation 'org.bstats:bstats-bukkit:3.0.0'
 
     testImplementation 'junit:junit:4.13.2'
+    // PostgreSQLDatabaseIntegrationTest runs the SQL layer against an embedded PostgreSQL server.
+    testImplementation 'io.zonky.test:embedded-postgres:2.2.2'
+    // DatabaseBridge names its thread with Guava, which the server provides at runtime.
+    testImplementation 'com.google.guava:guava:33.3.1-jre'
 
     // Spigot jars
     compileOnly "org.spigotmc:v1_8_R3-Taco:latest"

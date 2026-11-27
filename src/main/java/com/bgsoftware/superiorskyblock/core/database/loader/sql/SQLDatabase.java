@@ -27,6 +27,73 @@ public class SQLDatabase {
 
     }
 
+    /**
+     * Creates the unique indexes. PostgreSQL's upserts name their conflict columns, so each index must exist
+     * before the first write.
+     */
+    public static void createIndexes() {
+        DBSession.createIndex("islands_bans_index", "islands_bans",
+                "island", "player");
+
+        DBSession.createIndex("block_limits_index", "islands_block_limits",
+                "island", "block");
+
+        DBSession.createIndex("islands_chests_index", "islands_chests",
+                "island", DBSession.quoteIdentifier("index"));
+
+        DBSession.createIndex("islands_effects_index", "islands_effects",
+                "island", "effect_type");
+
+        DBSession.createIndex("entity_limits_index", "islands_entity_limits",
+                "island", "entity");
+
+        DBSession.createIndex("islands_flags_index", "islands_flags",
+                "island", "name");
+
+        DBSession.createIndex("islands_generators_index", "islands_generators",
+                "island", "environment", "block");
+
+        DBSession.createIndex("islands_homes_index", "islands_homes",
+                "island", "environment");
+
+        DBSession.createIndex("islands_members_index", "islands_members",
+                "island", "player");
+
+        DBSession.createIndex("islands_missions_index", "islands_missions",
+                "island", "name");
+
+        DBSession.createIndex("player_permissions_index", "islands_player_permissions",
+                "island", "player", "permission");
+
+        DBSession.createIndex("islands_ratings_index", "islands_ratings",
+                "island", "player");
+
+        DBSession.createIndex("role_limits_index", "islands_role_limits",
+                "island", "role");
+
+        DBSession.createIndex("role_permissions_index", "islands_role_permissions",
+                "island", "permission");
+
+        DBSession.createIndex("islands_upgrades_index", "islands_upgrades",
+                "island", "upgrade");
+
+        DBSession.createIndex("visitor_homes_index", "islands_visitor_homes",
+                "island", "environment");
+
+        DBSession.createIndex("islands_visitors_index", "islands_visitors",
+                "island", "player");
+
+        DBSession.createIndex("warp_categories_index", "islands_warp_categories",
+                "island", "name");
+
+        DBSession.createIndex("islands_warps_index", "islands_warps",
+                "island", "name");
+
+        DBSession.createIndex("players_missions_index", "players_missions",
+                "player", "name");
+    
+    }
+
     public static void initializeDatabase() {
         createMetadataTable();
         createIslandsTable();

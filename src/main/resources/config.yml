@@ -18,6 +18,7 @@ database:
   # Whether the datastore folder should be back-up on startup.
   backup: true
   # Remote database information
+  # address, db-name, user-name and password may read environment variables as ${NAME}.
   address: 'localhost'
   # MySQL/MariaDB commonly use 3306. PostgreSQL commonly uses 5432.
   port: 3306
@@ -29,6 +30,8 @@ database:
   allowPublicKeyRetrieval: true
   waitTimeout: 600000
   maxLifetime: 1800000
+  # The most connections kept open to the database. Used for PostgreSQL only.
+  pool-size: 8
 
 # Set the main command of the plugin.
 # You can add aliases by adding "," after the command name, and split them using ",".

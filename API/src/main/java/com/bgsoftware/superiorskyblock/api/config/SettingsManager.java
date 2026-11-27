@@ -883,6 +883,15 @@ public interface SettingsManager {
          */
         long getMaxLifetime();
 
+        /**
+         * The most connections the plugin keeps open to the database.
+         * Used for PostgreSQL only.
+         * Config-path: database.pool-size
+         */
+        default int getPoolSize() {
+            return 8;
+        }
+
     }
 
     interface DefaultValues {

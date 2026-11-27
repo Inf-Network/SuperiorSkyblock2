@@ -81,7 +81,7 @@ public class SQLDatabaseDialectTest {
         assertEquals("BYTEA", PostgreSQLDatabaseSession.prepareColumnType("LONGBLOB"));
         assertEquals("BYTEA", PostgreSQLDatabaseSession.prepareColumnType("BLOB"));
         assertEquals("VARCHAR(255)", PostgreSQLDatabaseSession.prepareColumnType("LONG_UNIQUE_TEXT"));
-        assertEquals("VARCHAR(30)", PostgreSQLDatabaseSession.prepareColumnType("UNIQUE_TEXT"));
+        assertEquals("VARCHAR(255)", PostgreSQLDatabaseSession.prepareColumnType("UNIQUE_TEXT"));
         assertEquals("DECIMAL(10, 2)", PostgreSQLDatabaseSession.prepareColumnType("DECIMAL"));
         assertEquals("INTEGER DEFAULT 4", PostgreSQLDatabaseSession.prepareColumnType("INTEGER DEFAULT 4"));
         assertEquals("VARCHAR(7)", PostgreSQLDatabaseSession.prepareColumnType("VARCHAR(7)"));

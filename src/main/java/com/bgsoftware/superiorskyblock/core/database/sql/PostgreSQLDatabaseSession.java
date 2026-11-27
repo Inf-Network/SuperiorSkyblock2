@@ -36,8 +36,9 @@ final class PostgreSQLDatabaseSession extends SQLDatabaseSession<PostgreSQLDatab
                     this.args.useSSL ? "require" : "disable"));
             config.setUsername(this.args.userName);
             config.setPassword(this.args.password);
-            config.setMinimumIdle(5);
-            config.setMaximumPoolSize(50);
+            // The database role allows few connections, and SuperiorSkyblock writes from a single thread.
+            config.setMaximumPoolSize(this.args.poolSize);
+            config.setMinimumIdle(Math.min(2, this.args.poolSize));
             config.setConnectionTimeout(10000);
             config.setIdleTimeout(this.args.waitTimeout);
             config.setMaxLifetime(this.args.maxLifetime);
@@ -219,7 +220,9 @@ final class PostgreSQLDatabaseSession extends SQLDatabaseSession<PostgreSQLDatab
                 mappedType = "VARCHAR(255)";
                 break;
             case "UNIQUE_TEXT":
-                mappedType = "VARCHAR(30)";
+                // MySQL keeps these short to fit its index key limit. PostgreSQL has no such limit, and a
+                // namespaced block or privilege name longer than 30 characters must not fail the write.
+                mappedType = "VARCHAR(255)";
                 break;
             case "LONGBLOB":
             case "BLOB":
@@ -273,9 +276,11 @@ final class PostgreSQLDatabaseSession extends SQLDatabaseSession<PostgreSQLDatab
         private final boolean useSSL;
         private final long waitTimeout;
         private final long maxLifetime;
+        private final int poolSize;
 
         Args(String address, int port, String dbName, String userName, String password, String prefix,
-             boolean useSSL, long waitTimeout, long maxLifetime, String databaseThreadName, ILogger logger) {
+             boolean useSSL, long waitTimeout, long maxLifetime, int poolSize, String databaseThreadName,
+             ILogger logger) {
             super(validatePrefix(prefix), databaseThreadName, logger);
             this.address = address;
             this.dbName = dbName;
@@ -285,6 +290,7 @@ final class PostgreSQLDatabaseSession extends SQLDatabaseSession<PostgreSQLDatab
             this.useSSL = useSSL;
             this.waitTimeout = waitTimeout;
             this.maxLifetime = maxLifetime;
+            this.poolSize = Math.max(1, poolSize);
         }
 
         private static String validatePrefix(String prefix) {

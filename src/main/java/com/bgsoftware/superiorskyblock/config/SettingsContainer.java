@@ -80,6 +80,7 @@ public class SettingsContainer {
     public final boolean databaseMySQLPublicKeyRetrieval;
     public final long databaseMySQLWaitTimeout;
     public final long databaseMySQLMaxLifetime;
+    public final int databasePoolSize;
     public final int maxIslandSize;
     public final String islandCommand;
     public final int defaultIslandSize;
@@ -248,16 +249,17 @@ public class SettingsContainer {
     public SettingsContainer(SuperiorSkyblockPlugin plugin, YamlConfiguration config) throws ManagerLoadException {
         databaseType = config.getString("database.type").toUpperCase(Locale.ENGLISH);
         databaseBackup = config.getBoolean("database.backup");
-        databaseMySQLAddress = config.getString("database.address");
+        databaseMySQLAddress = environmentValue(config, "database.address");
         databaseMySQLPort = config.getInt("database.port");
-        databaseMySQLDBName = config.getString("database.db-name");
-        databaseMySQLUsername = config.getString("database.user-name");
-        databaseMySQLPassword = config.getString("database.password");
+        databaseMySQLDBName = environmentValue(config, "database.db-name");
+        databaseMySQLUsername = environmentValue(config, "database.user-name");
+        databaseMySQLPassword = environmentValue(config, "database.password");
         databaseMySQLPrefix = config.getString("database.prefix");
         databaseMySQLSSL = config.getBoolean("database.useSSL");
         databaseMySQLPublicKeyRetrieval = config.getBoolean("database.allowPublicKeyRetrieval");
         databaseMySQLWaitTimeout = config.getLong("database.waitTimeout");
         databaseMySQLMaxLifetime = config.getLong("database.maxLifetime");
+        databasePoolSize = Math.max(1, config.getInt("database.pool-size", 8));
 
         calcInterval = config.getLong("calc-interval", 6000);
         islandCommand = config.getString("island-command", "island,is,islands");
@@ -626,6 +628,15 @@ public class SettingsContainer {
         helpOnNoPermission = config.getBoolean("help-on-no-permission", false);
         cacheSchematics = config.getBoolean("cache-schematics", true);
         entityCategories = loadEntityCategories(plugin);
+    }
+
+    private static String environmentValue(YamlConfiguration config, String path) throws ManagerLoadException {
+        try {
+            return EnvironmentValues.expand(config.getString(path), System.getenv());
+        } catch (IllegalStateException error) {
+            throw new ManagerLoadException(error.getMessage() + " (" + path + ")",
+                    ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
+        }
     }
 
     private void loadDimensions(ConfigurationSection dimensionsSection) throws ManagerLoadException {

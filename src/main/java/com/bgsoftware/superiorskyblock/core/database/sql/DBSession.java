@@ -61,6 +61,14 @@ public class DBSession {
 
     }
 
+    /**
+     * Uses a session that is already connected. Tests use it to run the SQL layer without the plugin.
+     */
+    static void useSession(SQLDatabaseSession<?> session, SQLDatabaseDialect dialect) {
+        globalSession = session;
+        databaseDialect = dialect;
+    }
+
     public static boolean isReady() {
         return globalSession != null;
     }
@@ -261,7 +269,7 @@ public class DBSession {
                 session = new PostgreSQLDatabaseSession(new PostgreSQLDatabaseSession.Args(database.getAddress(),
                         database.getPort(), database.getDBName(), database.getUsername(), database.getPassword(),
                         database.getPrefix(), database.hasSSL(), database.getWaitTimeout(), database.getMaxLifetime(),
-                        "SuperiorSkyblock Database Thread", LOGGER));
+                        database.getPoolSize(), "SuperiorSkyblock Database Thread", LOGGER));
                 if (logging)
                     session.setLogging(true);
                 return session;

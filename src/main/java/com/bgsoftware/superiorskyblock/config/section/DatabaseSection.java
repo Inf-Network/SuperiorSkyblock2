@@ -64,4 +64,9 @@ public class DatabaseSection extends SettingsContainerHolder implements Settings
     public long getMaxLifetime() {
         return getContainer().databaseMySQLMaxLifetime;
     }
+
+    @Override
+    public int getPoolSize() {
+        return getContainer().databasePoolSize;
+    }
 }
