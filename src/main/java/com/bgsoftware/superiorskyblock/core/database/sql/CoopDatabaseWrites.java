@@ -29,7 +29,7 @@ public final class CoopDatabaseWrites {
             COOP_WRITES.remove();
         }
         if (completed && writes.isEmpty()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("No Coop SQL writes were submitted"));
+            return failed(new IllegalStateException("No Coop SQL writes were submitted"));
         }
         return CompletableFuture.allOf(writes.toArray(new CompletableFuture<?>[0])).thenApply(ignored -> completed);
     }
@@ -37,7 +37,7 @@ public final class CoopDatabaseWrites {
     /** Reads the durable roster independently of the island's in-memory member list. */
     public static CompletableFuture<Boolean> storedCoopMembership(UUID island, UUID character) {
         if (!DBSession.isReady()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Superior database is not ready"));
+            return failed(new IllegalStateException("Superior database is not ready"));
         }
         CompletableFuture<Boolean> owner = rowExists("islands", " WHERE uuid='" + island + "' AND owner='" + character + "'");
         CompletableFuture<Boolean> member = rowExists("islands_members",
@@ -49,6 +49,13 @@ public final class CoopDatabaseWrites {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         DBSession.select(table, filter, new QueryResult<ResultSet>()
                 .onSuccess(rows -> result.complete(rows.next())).onFail(result::completeExceptionally));
+        return result;
+    }
+
+    // CompletableFuture.failedFuture is Java 9+; the plugin is compiled for Java 8.
+    private static <T> CompletableFuture<T> failed(Throwable failure) {
+        CompletableFuture<T> result = new CompletableFuture<>();
+        result.completeExceptionally(failure);
         return result;
     }
 
