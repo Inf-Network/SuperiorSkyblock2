@@ -42,6 +42,11 @@ final class PostgreSQLDatabaseSession extends SQLDatabaseSession<PostgreSQLDatab
             config.setConnectionTimeout(10000);
             config.setIdleTimeout(this.args.waitTimeout);
             config.setMaxLifetime(this.args.maxLifetime);
+            // Seconds. Writes run on one thread, so a stalled connection without a socket timeout would block
+            // every later write.
+            config.addDataSourceProperty("connectTimeout", "10");
+            config.addDataSourceProperty("socketTimeout", "30");
+            config.addDataSourceProperty("ApplicationName", "SuperiorSkyblock2");
 
             createdDataSource = new HikariDataSource(config);
             this.dataSource = createdDataSource;

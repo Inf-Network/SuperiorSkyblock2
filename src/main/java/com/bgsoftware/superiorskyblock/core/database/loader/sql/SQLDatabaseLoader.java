@@ -54,20 +54,19 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
             throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
         }
 
-        SQLDatabase.UpgradeResult databaseUpgradeResult;
         try {
-            databaseUpgradeResult = SQLDatabase.upgradeDatabase();
+            SQLDatabase.UpgradeResult databaseUpgradeResult = SQLDatabase.upgradeDatabase();
             SQLDatabase.initializeDatabase();
+
+            if (databaseUpgradeResult.isUpgraded()) {
+                if (DBSession.isPostgreSQL())
+                    DBSession.updateDatabaseVersion(databaseUpgradeResult.getDatabaseVersion());
+                else
+                    GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
+            }
         } catch (IllegalStateException error) {
             DBSession.close();
             throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
-        }
-
-        if (databaseUpgradeResult.isUpgraded()) {
-            if (DBSession.isPostgreSQL())
-                DBSession.updateDatabaseVersion(databaseUpgradeResult.getDatabaseVersion());
-            else
-                GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
         }
 
         DBSession.select("grid", "", new QueryResult<ResultSet>()
@@ -79,8 +78,14 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
     }
 
     @Override
-    protected void handlePostInitialize() {
-        SQLDatabase.createIndexes();
+    protected void handlePostInitialize() throws ManagerLoadException {
+        try {
+            SQLDatabase.createIndexes();
+        } catch (IllegalStateException error) {
+            // On PostgreSQL a missing index fails every upsert of its table, so stop instead of running without it.
+            DBSession.close();
+            throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
+        }
     }
 
     @Override

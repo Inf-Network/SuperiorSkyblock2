@@ -50,7 +50,7 @@ public class SQLDatabaseBridge implements DatabaseBridge {
     }
 
     @Override
-    public void updateObject(String table, @Nullable DatabaseFilter filter, Pair<String, Object>[] columns) {
+    public void updateObject(String table, @Nullable DatabaseFilter filter, Pair<String, Object>... columns) {
         if (databaseBridgeMode != DatabaseBridgeMode.SAVE_DATA)
             return;
 
