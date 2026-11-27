@@ -2,16 +2,13 @@ package com.bgsoftware.superiorskyblock.core.database.sql;
 
 import com.bgsoftware.common.annotations.Nullable;
 import com.bgsoftware.common.databasebridge.sql.query.QueryResult;
-import com.bgsoftware.common.databasebridge.sql.transaction.DeleteSQLDatabaseTransaction;
-import com.bgsoftware.common.databasebridge.sql.transaction.InsertSQLDatabaseTransaction;
-import com.bgsoftware.common.databasebridge.sql.transaction.UpdateSQLDatabaseTransaction;
+import com.bgsoftware.common.databasebridge.sql.transaction.CustomSQLDatabaseTransaction;
 import com.bgsoftware.common.databasebridge.transaction.IDatabaseTransaction;
 import com.bgsoftware.superiorskyblock.api.data.DatabaseBridge;
 import com.bgsoftware.superiorskyblock.api.data.DatabaseBridgeMode;
 import com.bgsoftware.superiorskyblock.api.data.DatabaseFilter;
 import com.bgsoftware.superiorskyblock.api.objects.Pair;
 import com.bgsoftware.superiorskyblock.core.logging.Log;
-import com.bgsoftware.superiorskyblock.core.mutable.MutableObject;
 
 import java.sql.ResultSet;
 import java.util.LinkedList;
@@ -73,7 +70,8 @@ public class SQLDatabaseBridge implements DatabaseBridge {
             });
         }
 
-        UpdateSQLDatabaseTransaction transaction = new UpdateSQLDatabaseTransaction(table, columnNames, filteredColumns);
+        CustomSQLDatabaseTransaction transaction = DBSession.createUpdateTransaction(table, columnNames,
+                filteredColumns);
         transaction.bindObjects(values);
         submitTransaction(transaction);
     }
@@ -91,7 +89,7 @@ public class SQLDatabaseBridge implements DatabaseBridge {
             values.add(column.getValue());
         }
 
-        InsertSQLDatabaseTransaction transaction = new InsertSQLDatabaseTransaction(table, columnNames);
+        CustomSQLDatabaseTransaction transaction = DBSession.createInsertTransaction(table, columnNames);
         transaction.bindObjects(values);
         submitTransaction(transaction);
     }
@@ -107,11 +105,11 @@ public class SQLDatabaseBridge implements DatabaseBridge {
         if (filter != null) {
             filter.forEach((column, value) -> {
                 filteredColumns.add(column);
-                values.add(value + "");
+                values.add(value);
             });
         }
 
-        DeleteSQLDatabaseTransaction transaction = new DeleteSQLDatabaseTransaction(table, filteredColumns);
+        CustomSQLDatabaseTransaction transaction = DBSession.createDeleteTransaction(table, filteredColumns);
         transaction.bindObjects(values);
 
         submitTransaction(transaction);
@@ -119,19 +117,12 @@ public class SQLDatabaseBridge implements DatabaseBridge {
 
     @Override
     public void loadObject(String table, DatabaseFilter filter, Consumer<Map<String, Object>> resultConsumer) {
-        MutableObject<String> columnFilter = new MutableObject<>(DBSession.getColumnFilter(filter));
-
-        filter.forEach((column, value) -> {
-            columnFilter.setValue(columnFilter.getValue().replaceFirst("\\?", value instanceof String ?
-                    String.format("'%s'", value) : value.toString()));
-        });
-
-        DBSession.select(table, columnFilter.getValue(), new QueryResult<ResultSet>().onSuccess(resultSet -> {
+        DBSession.select(table, filter, new QueryResult<ResultSet>().onSuccess(resultSet -> {
             while (resultSet.next()) {
                 try {
                     resultConsumer.accept(new ResultSetMapBridge(resultSet));
                 } catch (Exception error) {
-                    Log.entering("ENTER", table, columnFilter);
+                    Log.entering("ENTER", table, filter);
                     Log.error(error, "An unexpected error occurred while loading data from database:");
                 }
             }

@@ -7,9 +7,12 @@ import com.bgsoftware.superiorskyblock.core.database.loader.sql.upgrade.v1.Datab
 import com.bgsoftware.superiorskyblock.core.database.loader.sql.upgrade.v2.DatabaseUpgrade_V2;
 import com.bgsoftware.superiorskyblock.core.database.loader.sql.upgrade.v3.DatabaseUpgrade_V3;
 import com.bgsoftware.superiorskyblock.core.database.sql.DBSession;
+import com.bgsoftware.superiorskyblock.core.mutable.MutableBoolean;
 import com.bgsoftware.superiorskyblock.core.mutable.MutableInt;
+import com.bgsoftware.superiorskyblock.core.mutable.MutableObject;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class SQLDatabase {
 
@@ -35,11 +38,35 @@ public class SQLDatabase {
 
     public static UpgradeResult upgradeDatabase() {
         MutableInt databaseVersionMutable = new MutableInt(0);
+        MutableBoolean metadataTableExists = new MutableBoolean(false);
+        MutableObject<Throwable> metadataError = new MutableObject<>(null);
 
         DBSession.select("ssb_metadata", "", new QueryResult<ResultSet>()
-                .onSuccess(result -> databaseVersionMutable.set(result.getInt("version")))
-                .onFail(error -> {
-                }));
+                .onSuccess(result -> {
+                    metadataTableExists.set(true);
+                    if (result.next())
+                        databaseVersionMutable.set(result.getInt("version"));
+                })
+                .onFail(metadataError::setValue));
+
+        if (DBSession.isPostgreSQL() && !metadataTableExists.get()) {
+            ensureUndefinedTableError("ssb_metadata", metadataError.getValue());
+
+            MutableBoolean islandsTableExists = new MutableBoolean(false);
+            MutableObject<Throwable> islandsError = new MutableObject<>(null);
+            DBSession.select("islands", "", new QueryResult<ResultSet>()
+                    .onSuccess(result -> islandsTableExists.set(true))
+                    .onFail(islandsError::setValue));
+
+            if (islandsTableExists.get()) {
+                throw new IllegalStateException("Detected a legacy PostgreSQL database without ssb_metadata. " +
+                        "Automatic conversion of this format is unsafe; migrate it through a supported " +
+                        "SQLite/MySQL/MariaDB database or start with an empty PostgreSQL database.");
+            }
+
+            ensureUndefinedTableError("islands", islandsError.getValue());
+            return new UpgradeResult(true, getCurrentDatabaseVersion());
+        }
 
         int databaseVersion = databaseVersionMutable.get();
         while (databaseVersion < DATABASE_UPGRADES.length) {
@@ -47,6 +74,15 @@ public class SQLDatabase {
         }
 
         return new UpgradeResult(databaseVersion > databaseVersionMutable.get(), databaseVersion);
+    }
+
+    private static void ensureUndefinedTableError(String tableName, Throwable error) {
+        if (error == null)
+            return;
+
+        if (!(error instanceof SQLException) || !"42P01".equals(((SQLException) error).getSQLState())) {
+            throw new IllegalStateException("Failed to inspect PostgreSQL table " + tableName + ".", error);
+        }
     }
 
     public static int getCurrentDatabaseVersion() {
@@ -105,12 +141,12 @@ public class SQLDatabase {
         DBSession.createTable("islands_block_limits",
                 new Column("island", "UUID"),
                 new Column("block", "UNIQUE_TEXT"),
-                new Column("`limit`", "INTEGER")
+                new Column(DBSession.quoteIdentifier("limit"), "INTEGER")
         );
 
         DBSession.createTable("islands_chests",
                 new Column("island", "UUID"),
-                new Column("`index`", "INTEGER"),
+                new Column(DBSession.quoteIdentifier("index"), "INTEGER"),
                 new Column("contents", "LONGBLOB")
         );
 
@@ -128,7 +164,7 @@ public class SQLDatabase {
         DBSession.createTable("islands_entity_limits",
                 new Column("island", "UUID"),
                 new Column("entity", "UNIQUE_TEXT"),
-                new Column("`limit`", "INTEGER")
+                new Column(DBSession.quoteIdentifier("limit"), "INTEGER")
         );
 
         DBSession.createTable("islands_flags",
@@ -180,7 +216,7 @@ public class SQLDatabase {
         DBSession.createTable("islands_role_limits",
                 new Column("island", "UUID"),
                 new Column("role", "INTEGER"),
-                new Column("`limit`", "INTEGER")
+                new Column(DBSession.quoteIdentifier("limit"), "INTEGER")
         );
 
         DBSession.createTable("islands_role_permissions",
