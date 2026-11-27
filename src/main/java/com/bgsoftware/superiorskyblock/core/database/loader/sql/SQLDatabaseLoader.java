@@ -19,8 +19,16 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
 
     @Override
     public void setState(State state) throws ManagerLoadException {
-        if (!plugin.getFactory().hasCustomDatabaseBridge())
+        if (plugin.getFactory().hasCustomDatabaseBridge())
+            return;
+
+        try {
             super.setState(state);
+        } catch (ManagerLoadException error) {
+            if (DBSession.isReady())
+                DBSession.close();
+            throw error;
+        }
     }
 
     @Override
@@ -32,6 +40,9 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
 
         try {
             DBSession.select("ssb_metadata", "", new QueryResult<ResultSet>().onSuccess(resultSet -> {
+                if (!resultSet.next())
+                    return;
+
                 int databaseVersion = resultSet.getInt("version");
 
                 if (databaseVersion > SQLDatabase.getCurrentDatabaseVersion())
@@ -39,81 +50,42 @@ public class SQLDatabaseLoader extends MachineStateDatabaseLoader {
             }).onFail(error -> {
             }));
         } catch (IllegalStateException error) {
+            DBSession.close();
             throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
         }
 
-        SQLDatabase.UpgradeResult databaseUpgradeResult = SQLDatabase.upgradeDatabase();
+        try {
+            SQLDatabase.UpgradeResult databaseUpgradeResult = SQLDatabase.upgradeDatabase();
+            SQLDatabase.initializeDatabase();
 
-        SQLDatabase.initializeDatabase();
-
-        if (databaseUpgradeResult.isUpgraded())
-            GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
+            if (databaseUpgradeResult.isUpgraded()) {
+                if (DBSession.isPostgreSQL())
+                    DBSession.updateDatabaseVersion(databaseUpgradeResult.getDatabaseVersion());
+                else
+                    GridDatabaseBridge.updateVersion(plugin.getGrid(), databaseUpgradeResult.getDatabaseVersion());
+            }
+        } catch (IllegalStateException error) {
+            DBSession.close();
+            throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
+        }
 
         DBSession.select("grid", "", new QueryResult<ResultSet>()
+                .onSuccess(resultSet -> {
+                    if (!resultSet.next())
+                        GridDatabaseBridge.insertGrid(plugin.getGrid());
+                })
                 .onFail(error -> GridDatabaseBridge.insertGrid(plugin.getGrid())));
     }
 
     @Override
-    protected void handlePostInitialize() {
-        DBSession.createIndex("islands_bans_index", "islands_bans",
-                "island", "player");
-
-        DBSession.createIndex("block_limits_index", "islands_block_limits",
-                "island", "block");
-
-        DBSession.createIndex("islands_chests_index", "islands_chests",
-                "island", "`index`");
-
-        DBSession.createIndex("islands_effects_index", "islands_effects",
-                "island", "effect_type");
-
-        DBSession.createIndex("entity_limits_index", "islands_entity_limits",
-                "island", "entity");
-
-        DBSession.createIndex("islands_flags_index", "islands_flags",
-                "island", "name");
-
-        DBSession.createIndex("islands_generators_index", "islands_generators",
-                "island", "environment", "block");
-
-        DBSession.createIndex("islands_homes_index", "islands_homes",
-                "island", "environment");
-
-        DBSession.createIndex("islands_members_index", "islands_members",
-                "island", "player");
-
-        DBSession.createIndex("islands_missions_index", "islands_missions",
-                "island", "name");
-
-        DBSession.createIndex("player_permissions_index", "islands_player_permissions",
-                "island", "player", "permission");
-
-        DBSession.createIndex("islands_ratings_index", "islands_ratings",
-                "island", "player");
-
-        DBSession.createIndex("role_limits_index", "islands_role_limits",
-                "island", "role");
-
-        DBSession.createIndex("role_permissions_index", "islands_role_permissions",
-                "island", "permission");
-
-        DBSession.createIndex("islands_upgrades_index", "islands_upgrades",
-                "island", "upgrade");
-
-        DBSession.createIndex("visitor_homes_index", "islands_visitor_homes",
-                "island", "environment");
-
-        DBSession.createIndex("islands_visitors_index", "islands_visitors",
-                "island", "player");
-
-        DBSession.createIndex("warp_categories_index", "islands_warp_categories",
-                "island", "name");
-
-        DBSession.createIndex("islands_warps_index", "islands_warps",
-                "island", "name");
-
-        DBSession.createIndex("players_missions_index", "players_missions",
-                "player", "name");
+    protected void handlePostInitialize() throws ManagerLoadException {
+        try {
+            SQLDatabase.createIndexes();
+        } catch (IllegalStateException error) {
+            // On PostgreSQL a missing index fails every upsert of its table, so stop instead of running without it.
+            DBSession.close();
+            throw new ManagerLoadException(error.getMessage(), ManagerLoadException.ErrorLevel.SERVER_SHUTDOWN);
+        }
     }
 
     @Override

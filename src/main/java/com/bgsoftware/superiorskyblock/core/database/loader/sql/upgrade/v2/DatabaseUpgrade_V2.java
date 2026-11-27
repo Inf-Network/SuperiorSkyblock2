@@ -128,7 +128,8 @@ public class DatabaseUpgrade_V2 implements Runnable {
             return;
 
         CustomSQLDatabaseTransaction updateTransaction = new CustomSQLDatabaseTransaction(
-                "UPDATE {prefix}islands_chests SET contents=? WHERE island=? AND `index`=?");
+                "UPDATE {prefix}islands_chests SET contents=? WHERE island=? AND " +
+                        DBSession.quoteIdentifier("index") + "=?");
 
         for (DatabaseChest chestData : islandContents) {
             updateTransaction
