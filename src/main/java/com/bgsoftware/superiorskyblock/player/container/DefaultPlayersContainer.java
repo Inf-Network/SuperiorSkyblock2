@@ -1,10 +1,10 @@
 package com.bgsoftware.superiorskyblock.player.container;
 
 import com.bgsoftware.common.annotations.Nullable;
-import com.bgsoftware.superiorskyblock.api.player.ProfileIdentityProvider;
 import com.bgsoftware.superiorskyblock.api.player.container.PlayersContainer;
 import com.bgsoftware.superiorskyblock.api.wrappers.SuperiorPlayer;
 import com.bgsoftware.superiorskyblock.core.SequentialListBuilder;
+import com.bgsoftware.superiorskyblock.player.ProfileIdentities;
 
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +24,7 @@ public class DefaultPlayersContainer implements PlayersContainer {
 
         if (superiorPlayer == null) {
             superiorPlayer = players.values().stream()
-                    .filter(player -> !ProfileIdentityProvider.isCharacterId(player.getUniqueId())
+                    .filter(player -> !ProfileIdentities.isCharacterId(player.getUniqueId())
                             && player.getName().equalsIgnoreCase(name))
                     .findFirst().orElse(null);
             if (superiorPlayer != null)
@@ -49,7 +49,7 @@ public class DefaultPlayersContainer implements PlayersContainer {
     public void addPlayer(SuperiorPlayer superiorPlayer) {
         this.players.put(superiorPlayer.getUniqueId(), superiorPlayer);
         String playerName = superiorPlayer.getName();
-        if (!ProfileIdentityProvider.isCharacterId(superiorPlayer.getUniqueId()) && !playerName.equals("null"))
+        if (!ProfileIdentities.isCharacterId(superiorPlayer.getUniqueId()) && !playerName.equals("null"))
             this.playersByNames.put(playerName.toLowerCase(Locale.ENGLISH), superiorPlayer);
     }
 

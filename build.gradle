@@ -56,10 +56,25 @@ allprojects {
 
 repositories {
     mavenCentral()
+    // skyblock-profile-api: Skyblock-Core provides it at runtime. Local builds use the Skyblock repo's
+    // publishToMavenLocal; CI reads it from GitHub Packages with its GITHUB_TOKEN.
+    mavenLocal {
+        content { includeGroup 'net.infnetwork.skyblock' }
+    }
+    maven {
+        name = 'SkyblockPackages'
+        url 'https://maven.pkg.github.com/Inf-Network/Skyblock'
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user') ?: ''
+            password = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key') ?: ''
+        }
+        content { includeGroup 'net.infnetwork.skyblock' }
+    }
 }
 
 dependencies {
     implementation project(":API")
+    compileOnly 'net.infnetwork.skyblock:skyblock-profile-api:1.0.0'
 
     implementation 'com.bgsoftware.common.config:CommentedConfiguration:b1'
     implementation 'com.bgsoftware.common.updater:Updater:b1'
