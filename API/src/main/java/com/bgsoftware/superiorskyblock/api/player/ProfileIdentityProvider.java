@@ -2,7 +2,13 @@ package com.bgsoftware.superiorskyblock.api.player;
 
 import java.util.UUID;
 
-/** Maps an authenticated Minecraft account to the island data for its selected character. */
+/**
+ * Maps an authenticated Minecraft account to the island data for its selected character.
+ *
+ * @deprecated SuperiorSkyblock2 now reads Skyblock-Core's shared {@code net.infnetwork.skyblock.profile.ProfileKeys}.
+ * Kept for API compatibility; Skyblock-Core still registers it.
+ */
+@Deprecated
 public interface ProfileIdentityProvider {
 
     /**
